@@ -2,9 +2,6 @@ import * as cdk from '@aws-cdk/core';
 import * as route53 from '@aws-cdk/aws-route53';
 import {Duration} from '@aws-cdk/core';
 
-/**
- * Add documentation to each, refactor Infrastack, deploy to beta
- */
 export interface InfraStackProps {
   /**
    * The top-level domain name that this stack manages.
