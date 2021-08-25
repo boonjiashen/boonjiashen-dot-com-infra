@@ -1,5 +1,6 @@
 import * as cdk from '@aws-cdk/core';
 import * as route53 from '@aws-cdk/aws-route53';
+import * as s3 from '@aws-cdk/aws-s3';
 import {Duration} from '@aws-cdk/core';
 
 export interface InfraStackProps {
@@ -41,12 +42,24 @@ export class InfraStack {
       comment: 'Managed by CDK',
     });
 
-    const blogDomainName = props.githubUsername + '.github.io';
+    const blogSubdomain = 'blog.' + props.topLevelDomainName;
+    const blogGithubDomain = props.githubUsername + '.github.io';
     new route53.CnameRecord(this.#stack, 'blogRecord', {
       zone: hostedZone,
-      domainName: blogDomainName,
-      recordName: 'blog.' + hostedZone.zoneName,
+      domainName: blogGithubDomain,
+      recordName: blogSubdomain,
       ttl: Duration.seconds(60),
+    });
+
+    const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
+      bucketName: props.topLevelDomainName,
+      versioned: true,
+      // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
+      // See https://aws.amazon.com/premiumsupport/knowledge-center/route-53-redirect-to-another-domain/
+      websiteRedirect: {
+        hostName: blogSubdomain,
+        protocol: s3.RedirectProtocol.HTTPS,
+      }
     });
   }
 }
