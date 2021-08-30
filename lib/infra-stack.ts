@@ -1,7 +1,9 @@
 import * as cdk from '@aws-cdk/core';
 import * as route53 from '@aws-cdk/aws-route53';
+import * as route53Targets from '@aws-cdk/aws-route53-targets';
 import * as s3 from '@aws-cdk/aws-s3';
 import {Duration} from '@aws-cdk/core';
+import { hostname } from 'os';
 
 export interface InfraStackProps {
   /**
@@ -30,6 +32,10 @@ export class InfraStack {
   constructor(scope: cdk.Construct, id: string, props: InfraStackProps) {
     this.#stack = new cdk.Stack(scope, id, {
       description: `Manages the infrastructure for ${props.topLevelDomainName}`,
+      env: {
+        // Cannot use an S3 record alias in region-agnostic stack
+        region: "ap-northeast-1",
+      }
     });
 
     /**
@@ -52,7 +58,7 @@ export class InfraStack {
     });
 
     const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
-      bucketName: props.topLevelDomainName,
+      bucketName: hostedZone.zoneName,
       versioned: true,
       // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
       // See https://aws.amazon.com/premiumsupport/knowledge-center/route-53-redirect-to-another-domain/
@@ -60,6 +66,12 @@ export class InfraStack {
         hostName: blogSubdomain,
         protocol: s3.RedirectProtocol.HTTPS,
       }
+    });
+
+    new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
+      zone: hostedZone,
+      recordName: hostedZone.zoneName,
+      target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(tldBucket)),
     });
   }
 }
