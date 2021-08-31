@@ -24,6 +24,15 @@ export interface InfraStackProps {
    * controlled by {@link https://github.com/boonjiashen/boonjiashen.github.io}.
    */
   githubUsername: string;
+
+  /**
+   * Used by Google's Webmaster central to verify that you own this domain.
+   * The token is a 68-character string that begins with google-site-verification=, followed by 43 additional characters.
+   * See also:
+   * https://www.google.com/webmasters/verification/details?hl=en-GB&domain=boonjiashen.com
+   * https://support.google.com/a/answer/2716802?hl=en
+   */
+  domainVerificationToken?: string;
 }
 
 export class InfraStack {
@@ -59,6 +68,7 @@ export class InfraStack {
 
     const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
       bucketName: hostedZone.zoneName,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       versioned: true,
       // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
       // See https://aws.amazon.com/premiumsupport/knowledge-center/route-53-redirect-to-another-domain/
@@ -70,8 +80,12 @@ export class InfraStack {
 
     new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
       zone: hostedZone,
-      recordName: hostedZone.zoneName,
       target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(tldBucket)),
     });
+
+    new route53.TxtRecord(this.#stack, 'ownershipVerificationRecord', {
+      zone: hostedZone,
+      values: props.domainVerificationToken ? [props.domainVerificationToken] : ["domain-verification-token-placeholder"],
+    })
   }
 }
