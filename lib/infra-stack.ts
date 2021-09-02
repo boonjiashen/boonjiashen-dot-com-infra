@@ -3,6 +3,7 @@ import * as route53 from '@aws-cdk/aws-route53';
 import * as route53Targets from '@aws-cdk/aws-route53-targets';
 import * as s3 from '@aws-cdk/aws-s3';
 import {Duration} from '@aws-cdk/core';
+import * as acm from '@aws-cdk/aws-certificatemanager';
 import { hostname } from 'os';
 
 export interface InfraStackProps {
@@ -31,6 +32,8 @@ export interface InfraStackProps {
    * See also:
    * https://www.google.com/webmasters/verification/details?hl=en-GB&domain=boonjiashen.com
    * https://support.google.com/a/answer/2716802?hl=en
+   *
+   * Default: no token
    */
   domainVerificationToken?: string;
 }
@@ -86,6 +89,13 @@ export class InfraStack {
     new route53.TxtRecord(this.#stack, 'ownershipVerificationRecord', {
       zone: hostedZone,
       values: props.domainVerificationToken ? [props.domainVerificationToken] : ["domain-verification-token-placeholder"],
-    })
+    });
+
+    // To allow visitors to connect to Elastic Beanstalk via HTTPS
+    // See https://aws.amazon.com/premiumsupport/knowledge-center/elastic-beanstalk-https-configuration/
+    new acm.Certificate(this.#stack, 'domainCertificate', {
+      domainName: "*." + hostedZone.zoneName,
+      validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
   }
 }
