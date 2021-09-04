@@ -1,10 +1,8 @@
-import * as cdk from '@aws-cdk/core';
-import * as route53 from '@aws-cdk/aws-route53';
-import * as route53Targets from '@aws-cdk/aws-route53-targets';
-import * as s3 from '@aws-cdk/aws-s3';
-import {Duration} from '@aws-cdk/core';
-import * as acm from '@aws-cdk/aws-certificatemanager';
-import { hostname } from 'os';
+import * as cdk from 'monocdk';
+import * as s3 from 'monocdk/aws-s3';
+import * as route53 from 'monocdk/aws-route53';
+import * as route53Targets from 'monocdk/aws-route53-targets';
+import * as acm from 'monocdk/aws-certificatemanager';
 
 export interface InfraStackProps {
   /**
@@ -66,7 +64,7 @@ export class InfraStack {
       zone: hostedZone,
       domainName: blogGithubDomain,
       recordName: blogSubdomain,
-      ttl: Duration.seconds(60),
+      ttl: cdk.Duration.seconds(60),
     });
 
     const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
