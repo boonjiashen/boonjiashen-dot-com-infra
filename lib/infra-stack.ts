@@ -1,5 +1,6 @@
 import * as cdk from 'monocdk';
 import * as s3 from 'monocdk/aws-s3';
+import * as s3deploy from 'monocdk/aws-s3-deployment';
 import * as route53 from 'monocdk/aws-route53';
 import * as route53Targets from 'monocdk/aws-route53-targets';
 import * as acm from 'monocdk/aws-certificatemanager';
@@ -94,6 +95,27 @@ export class InfraStack {
     new acm.Certificate(this.#stack, 'domainCertificate', {
       domainName: "*." + hostedZone.zoneName,
       validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
+
+    const mosaicBucket = new s3.Bucket(this.#stack, "mosaicBucket", {
+      bucketName: "mosaic." + hostedZone.zoneName,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      versioned: true,
+      publicReadAccess: true,
+      // Also enables static website hosting
+      websiteIndexDocument: "index.html",
+    });
+
+    new s3deploy.BucketDeployment(this.#stack, 'deployMosaicSite', {
+      sources: [s3deploy.Source.asset("assets/mosaic")],
+      destinationBucket: mosaicBucket,
+      retainOnDelete: false,
+    });
+
+    new route53.ARecord(this.#stack, 'mosaicRedirectRecord', {
+      zone: hostedZone,
+      recordName: "mosaic",
+      target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(mosaicBucket)),
     });
   }
 }
