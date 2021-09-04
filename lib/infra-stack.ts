@@ -72,12 +72,19 @@ export class InfraStack {
       bucketName: hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       versioned: true,
+      publicReadAccess: true,
       // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
       // See https://aws.amazon.com/premiumsupport/knowledge-center/route-53-redirect-to-another-domain/
       websiteRedirect: {
         hostName: blogSubdomain,
         protocol: s3.RedirectProtocol.HTTPS,
       }
+    });
+
+    new s3deploy.BucketDeployment(this.#stack, "deployTldBucketAssets", {
+      sources: [s3deploy.Source.asset("./assets/tld")],
+      destinationBucket: tldBucket,
+      retainOnDelete: false,
     });
 
     new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
@@ -107,7 +114,7 @@ export class InfraStack {
     });
 
     new s3deploy.BucketDeployment(this.#stack, 'deployMosaicSite', {
-      sources: [s3deploy.Source.asset("assets/mosaic")],
+      sources: [s3deploy.Source.asset("./assets/mosaic")],
       destinationBucket: mosaicBucket,
       retainOnDelete: false,
     });
