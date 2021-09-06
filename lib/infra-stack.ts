@@ -7,14 +7,14 @@ import { CfnOutput } from 'monocdk';
 
 export interface InfraStackProps {
   /**
-   * The top-level domain name that this stack manages.
-   * Examples: `example.com`, `boonjiashen.com`.
+   * The domain name that this stack manages; can be a subdomain
+   * Examples: `example.com`, `boonjiashen.com`, `dev.boonjiashen.com`
    *
-   * Outside of management by CDK, `blog.{topLevelDomainName}` should be
+   * Outside of management by CDK, `blog.{domainName}` should be
    * set as the custom domain of {@link githubUsername}, in
    * https://github.com/{githubUsername}/{githubUsername}.github.io/settings/pages
    */
-  topLevelDomainName: string;
+  domainName: string;
 
   /**
    * The username of the [Github Page]{@link https://pages.github.com/} that
@@ -32,9 +32,16 @@ export interface InfraStackProps {
    * https://www.google.com/webmasters/verification/details?hl=en-GB&domain=boonjiashen.com
    * https://support.google.com/a/answer/2716802?hl=en
    *
-   * Default: no token
+   * Default: placeholder string
    */
   domainVerificationToken?: string;
+
+  /**
+   * Name servers that'll be assigned to `dev.{domainName}.
+   *
+   * Default: placeholder singletone array
+   */
+  devNameServers?: string[];
 }
 
 export class InfraStack {
@@ -42,7 +49,7 @@ export class InfraStack {
 
   constructor(scope: cdk.Construct, id: string, props: InfraStackProps) {
     this.#stack = new cdk.Stack(scope, id, {
-      description: `Manages the infrastructure for ${props.topLevelDomainName}`,
+      description: `Manages the infrastructure for ${props.domainName}`,
       env: {
         // Cannot use an S3 record alias in region-agnostic stack
         region: "ap-northeast-1",
@@ -55,11 +62,17 @@ export class InfraStack {
      * {@link https://console.aws.amazon.com/route53/home#DomainDetail:boonjiashen-dev.com}
      */
     const hostedZone = new route53.HostedZone(this.#stack, 'hostedZone', {
-      zoneName: props.topLevelDomainName,
+      zoneName: props.domainName,
       comment: 'Managed by CDK',
     });
 
-    const blogSubdomain = 'blog.' + props.topLevelDomainName;
+    new route53.NsRecord(this.#stack, 'devNameServers', {
+      zone: hostedZone,
+      recordName: `dev.${props.domainName}`,
+      values: props.devNameServers ? props.devNameServers : ["not-a-real-name-server"],
+    });
+
+    const blogSubdomain = 'blog.' + props.domainName;
     const blogGithubDomain = props.githubUsername + '.github.io';
     new route53.CnameRecord(this.#stack, 'blogRecord', {
       zone: hostedZone,
