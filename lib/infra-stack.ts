@@ -3,7 +3,7 @@ import * as s3 from 'monocdk/aws-s3';
 import * as s3deploy from 'monocdk/aws-s3-deployment';
 import * as route53 from 'monocdk/aws-route53';
 import * as route53Targets from 'monocdk/aws-route53-targets';
-import * as acm from 'monocdk/aws-certificatemanager';
+import { CfnOutput } from 'monocdk';
 
 export interface InfraStackProps {
   /**
@@ -71,6 +71,7 @@ export class InfraStack {
     const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
       bucketName: hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,  // deletes bucket even if non-empty
       versioned: true,
       publicReadAccess: true,
       // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
@@ -97,16 +98,10 @@ export class InfraStack {
       values: props.domainVerificationToken ? [props.domainVerificationToken] : ["domain-verification-token-placeholder"],
     });
 
-    // To allow visitors to connect to Elastic Beanstalk via HTTPS
-    // See https://aws.amazon.com/premiumsupport/knowledge-center/elastic-beanstalk-https-configuration/
-    new acm.Certificate(this.#stack, 'domainCertificate', {
-      domainName: "*." + hostedZone.zoneName,
-      validation: acm.CertificateValidation.fromDns(hostedZone),
-    });
-
     const mosaicBucket = new s3.Bucket(this.#stack, "mosaicBucket", {
       bucketName: "mosaic." + hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,  // deletes bucket even if non-empty
       versioned: true,
       publicReadAccess: true,
       // Also enables static website hosting
@@ -124,5 +119,9 @@ export class InfraStack {
       recordName: "mosaic",
       target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(mosaicBucket)),
     });
+
+    new CfnOutput(this.#stack, "nameServers", {
+      value: cdk.Fn.join(",", hostedZone.hostedZoneNameServers!),
+    })
   }
 }
