@@ -20,7 +20,7 @@ Run `npm run fix` to fix formatting/linting problems, if possible.
 
 # Deploy
 
-The production stack manages [boonjiashen.com](http://boonjiashen.com/) while the beta (development) stack manages [dev.boonjiashen.com](http://boonjiashen.com/). The beta stack is meant for development before pushing changes to production, and isn't meant to serve production traffic.
+The production stack manages [boonjiashen.com](http://boonjiashen.com/) while the beta (development) stack manages [dev.boonjiashen.com](http://dev.boonjiashen.com/). The beta stack is meant for development before pushing changes to production, and isn't meant to serve production traffic.
 
 ```bash
 # To deploy the beta stack (dev.boonjiashen.com)
