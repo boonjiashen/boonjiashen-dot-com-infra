@@ -1,6 +1,6 @@
 # About
 
-[CDK](https://docs.aws.amazon.com/cdk) package to manage the infrastructure of [boonjiashen.com](http://boonjiashen.com/).
+[CDK](https://docs.aws.amazon.com/cdk) package to manage the infrastructure of [boonjiashen.com](http://boonjiashen.com/)
 
 ## Useful commands
 
@@ -15,9 +15,20 @@
 
 Run `npm run lint` to run linter
 
-Run `npm run gix` to fix formatting/linting problems, if possible.
+Run `npm run fix` to fix formatting/linting problems, if possible.
 
 
 # Deploy
 
-`cdk deploy`
+The production stack manages [boonjiashen.com](http://boonjiashen.com/) while the beta (development) stack manages [dev.boonjiashen.com](http://boonjiashen.com/). The beta stack is meant for development before pushing changes to production, and isn't meant to serve production traffic.
+
+```bash
+# To deploy the beta stack (dev.boonjiashen.com)
+cdk deploy infraStackBeta
+
+# To deploy the prod stack (boonjiashen.com)
+cdk deploy infraStackProd
+
+# To deploy all stacks
+cdk deploy --all
+```
