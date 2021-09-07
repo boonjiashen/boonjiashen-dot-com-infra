@@ -3,7 +3,7 @@ import * as s3 from 'monocdk/aws-s3';
 import * as s3deploy from 'monocdk/aws-s3-deployment';
 import * as route53 from 'monocdk/aws-route53';
 import * as route53Targets from 'monocdk/aws-route53-targets';
-import { CfnOutput } from 'monocdk';
+import {CfnOutput} from 'monocdk';
 
 export interface InfraStackProps {
   /**
@@ -52,8 +52,8 @@ export class InfraStack {
       description: `Manages the infrastructure for ${props.domainName}`,
       env: {
         // Cannot use an S3 record alias in region-agnostic stack
-        region: "ap-northeast-1",
-      }
+        region: 'ap-northeast-1',
+      },
     });
 
     /**
@@ -69,7 +69,9 @@ export class InfraStack {
     new route53.NsRecord(this.#stack, 'devNameServers', {
       zone: hostedZone,
       recordName: `dev.${props.domainName}`,
-      values: props.devNameServers ? props.devNameServers : ["not-a-real-name-server"],
+      values: props.devNameServers
+        ? props.devNameServers
+        : ['not-a-real-name-server'],
     });
 
     const blogSubdomain = 'blog.' + props.domainName;
@@ -84,7 +86,7 @@ export class InfraStack {
     const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
       bucketName: hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,  // deletes bucket even if non-empty
+      autoDeleteObjects: true, // deletes bucket even if non-empty
       versioned: true,
       publicReadAccess: true,
       // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
@@ -92,49 +94,55 @@ export class InfraStack {
       websiteRedirect: {
         hostName: blogSubdomain,
         protocol: s3.RedirectProtocol.HTTPS,
-      }
+      },
     });
 
-    new s3deploy.BucketDeployment(this.#stack, "deployTldBucketAssets", {
-      sources: [s3deploy.Source.asset("./assets/tld")],
+    new s3deploy.BucketDeployment(this.#stack, 'deployTldBucketAssets', {
+      sources: [s3deploy.Source.asset('./assets/tld')],
       destinationBucket: tldBucket,
       retainOnDelete: false,
     });
 
     new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(tldBucket)),
+      target: route53.RecordTarget.fromAlias(
+        new route53Targets.BucketWebsiteTarget(tldBucket)
+      ),
     });
 
     new route53.TxtRecord(this.#stack, 'ownershipVerificationRecord', {
       zone: hostedZone,
-      values: props.domainVerificationToken ? [props.domainVerificationToken] : ["domain-verification-token-placeholder"],
+      values: props.domainVerificationToken
+        ? [props.domainVerificationToken]
+        : ['domain-verification-token-placeholder'],
     });
 
-    const mosaicBucket = new s3.Bucket(this.#stack, "mosaicBucket", {
-      bucketName: "mosaic." + hostedZone.zoneName,
+    const mosaicBucket = new s3.Bucket(this.#stack, 'mosaicBucket', {
+      bucketName: 'mosaic.' + hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,  // deletes bucket even if non-empty
+      autoDeleteObjects: true, // deletes bucket even if non-empty
       versioned: true,
       publicReadAccess: true,
       // Also enables static website hosting
-      websiteIndexDocument: "index.html",
+      websiteIndexDocument: 'index.html',
     });
 
     new s3deploy.BucketDeployment(this.#stack, 'deployMosaicSite', {
-      sources: [s3deploy.Source.asset("./assets/mosaic")],
+      sources: [s3deploy.Source.asset('./assets/mosaic')],
       destinationBucket: mosaicBucket,
       retainOnDelete: false,
     });
 
     new route53.ARecord(this.#stack, 'mosaicRedirectRecord', {
       zone: hostedZone,
-      recordName: "mosaic",
-      target: route53.RecordTarget.fromAlias(new route53Targets.BucketWebsiteTarget(mosaicBucket)),
+      recordName: 'mosaic',
+      target: route53.RecordTarget.fromAlias(
+        new route53Targets.BucketWebsiteTarget(mosaicBucket)
+      ),
     });
 
-    new CfnOutput(this.#stack, "nameServers", {
-      value: cdk.Fn.join(",", hostedZone.hostedZoneNameServers!),
-    })
+    new CfnOutput(this.#stack, 'nameServers', {
+      value: cdk.Fn.join(',', hostedZone.hostedZoneNameServers!),
+    });
   }
 }
