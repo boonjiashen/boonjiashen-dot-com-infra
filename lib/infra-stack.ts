@@ -9,10 +9,6 @@ export interface InfraStackProps {
   /**
    * The domain name that this stack manages; can be a subdomain
    * Examples: `example.com`, `boonjiashen.com`, `dev.boonjiashen.com`
-   *
-   * Outside of management by CDK, `blog.{domainName}` should be
-   * set as the custom domain of {@link githubUsername}, in
-   * https://github.com/{githubUsername}/{githubUsername}.github.io/settings/pages
    */
   domainName: string;
 
@@ -56,11 +52,6 @@ export class InfraStack {
       },
     });
 
-    /**
-     * [After cdk-deploy] This zone will include automatically created name servers, which you will need to
-     * be provided to the domain registrar, e.g.,
-     * {@link https://console.aws.amazon.com/route53/home#DomainDetail:boonjiashen-dev.com}
-     */
     const hostedZone = new route53.HostedZone(this.#stack, 'hostedZone', {
       zoneName: props.domainName,
       comment: 'Managed by CDK',
@@ -74,9 +65,9 @@ export class InfraStack {
         : ['not-a-real-name-server'],
     });
 
-    const blogSubdomain = 'blog.' + props.domainName;
-    const blogGithubDomain = props.githubUsername + '.github.io';
-    new route53.CnameRecord(this.#stack, 'blogRecord', {
+    const blogSubdomain = `blog.${props.domainName}`;
+    const blogGithubDomain = `${props.githubUsername}.github.io`;
+    const blogRecord = new route53.CnameRecord(this.#stack, 'blogRecord', {
       zone: hostedZone,
       domainName: blogGithubDomain,
       recordName: blogSubdomain,
@@ -141,8 +132,24 @@ export class InfraStack {
       ),
     });
 
+    /**
+     * [After cdk-deploy] The hosted zone will include automatically created name servers, which you will need to
+     * be provided to the domain registrar, e.g.,
+     * {@link https://console.aws.amazon.com/route53/home#DomainDetail:boonjiashen-dev.com}
+     */
     new CfnOutput(this.#stack, 'nameServers', {
       value: cdk.Fn.join(',', hostedZone.hostedZoneNameServers!),
+    });
+
+    /**
+     * [After cdk-deploy] The "custom domain" field in `blogGithubManagementPage`
+     * should be set as `blogSubdomain`, for the subdomain to be mapped to the Github page.
+     */
+    new CfnOutput(this.#stack, 'blogSubdomain', {
+      value: blogSubdomain,
+    });
+    new CfnOutput(this.#stack, 'blogGithubManagementPage', {
+      value: `https://github.com/${props.githubUsername}/${props.githubUsername}.github.io/settings/pages`,
     });
   }
 }
