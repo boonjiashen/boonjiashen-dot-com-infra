@@ -3,6 +3,7 @@ import * as s3 from 'monocdk/aws-s3';
 import * as s3deploy from 'monocdk/aws-s3-deployment';
 import * as route53 from 'monocdk/aws-route53';
 import * as route53Targets from 'monocdk/aws-route53-targets';
+import * as fs from 'fs';
 import {CfnOutput} from 'monocdk';
 
 export interface InfraStackProps {
@@ -80,12 +81,15 @@ export class InfraStack {
       autoDeleteObjects: true, // deletes bucket even if non-empty
       versioned: true,
       publicReadAccess: true,
-      // Redirects http://<topLevelDomainName>.s3-website-<region>.amazonaws.com to <blogSubdomain>
-      // See https://aws.amazon.com/premiumsupport/knowledge-center/route-53-redirect-to-another-domain/
-      websiteRedirect: {
+      // This file doesn't exist, allowing the redirect to the blog
+      websiteIndexDocument: "index.html",
+      // Redirects all 404 (including index page, excluding PDF assets) to the blog
+      websiteRoutingRules: [{
+        condition: {
+          httpErrorCodeReturnedEquals: "404",
+        },
         hostName: blogSubdomain,
-        protocol: s3.RedirectProtocol.HTTPS,
-      },
+      }],
     });
 
     new s3deploy.BucketDeployment(this.#stack, 'deployTldBucketAssets', {
@@ -94,6 +98,8 @@ export class InfraStack {
       retainOnDelete: false,
     });
 
+    // Aliases the TLD to the S3 bucket of the same name, so that we can host PDFs under, https://<TLD>/*.pdf
+    // and also redirect https://<TLD> to the blog
     new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(
