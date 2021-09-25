@@ -3,10 +3,8 @@ import * as s3 from 'monocdk/aws-s3';
 import * as s3deploy from 'monocdk/aws-s3-deployment';
 import * as route53 from 'monocdk/aws-route53';
 import * as route53Targets from 'monocdk/aws-route53-targets';
-import * as fs from 'fs';
-import {CfnOutput} from 'monocdk';
 
-export interface InfraStackProps {
+export interface InfraStackProps extends cdk.StackProps {
   /**
    * The domain name that this stack manages; can be a subdomain
    * Examples: `example.com`, `boonjiashen.com`, `dev.boonjiashen.com`
@@ -41,24 +39,20 @@ export interface InfraStackProps {
   devNameServers?: string[];
 }
 
-export class InfraStack {
-  #stack: cdk.Stack;
+export class InfraStack extends cdk.Stack {
 
   constructor(scope: cdk.Construct, id: string, props: InfraStackProps) {
-    this.#stack = new cdk.Stack(scope, id, {
+    super(scope, id, {
       description: `Manages the infrastructure for ${props.domainName}`,
-      env: {
-        // Cannot use an S3 record alias in region-agnostic stack
-        region: 'ap-northeast-1',
-      },
-    });
+      ...props,
+    })
 
-    const hostedZone = new route53.HostedZone(this.#stack, 'hostedZone', {
+    const hostedZone = new route53.HostedZone(this, 'hostedZone', {
       zoneName: props.domainName,
       comment: 'Managed by CDK',
     });
 
-    new route53.NsRecord(this.#stack, 'devNameServers', {
+    new route53.NsRecord(this, 'devNameServers', {
       zone: hostedZone,
       recordName: `dev.${props.domainName}`,
       values: props.devNameServers
@@ -68,14 +62,14 @@ export class InfraStack {
 
     const blogSubdomain = `blog.${props.domainName}`;
     const blogGithubDomain = `${props.githubUsername}.github.io`;
-    const blogRecord = new route53.CnameRecord(this.#stack, 'blogRecord', {
+    const blogRecord = new route53.CnameRecord(this, 'blogRecord', {
       zone: hostedZone,
       domainName: blogGithubDomain,
       recordName: blogSubdomain,
       ttl: cdk.Duration.seconds(60),
     });
 
-    const tldBucket = new s3.Bucket(this.#stack, 'tldBucket', {
+    const tldBucket = new s3.Bucket(this, 'tldBucket', {
       bucketName: hostedZone.zoneName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true, // deletes bucket even if non-empty
@@ -92,7 +86,7 @@ export class InfraStack {
       }],
     });
 
-    new s3deploy.BucketDeployment(this.#stack, 'deployTldBucketAssets', {
+    new s3deploy.BucketDeployment(this, 'deployTldBucketAssets', {
       sources: [s3deploy.Source.asset('./assets/tld')],
       destinationBucket: tldBucket,
       retainOnDelete: false,
@@ -100,42 +94,18 @@ export class InfraStack {
 
     // Aliases the TLD to the S3 bucket of the same name, so that we can host PDFs under, https://<TLD>/*.pdf
     // and also redirect https://<TLD> to the blog
-    new route53.ARecord(this.#stack, 'tldToBlogRedirectRecord', {
+    new route53.ARecord(this, 'tldToBlogRedirectRecord', {
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(
         new route53Targets.BucketWebsiteTarget(tldBucket)
       ),
     });
 
-    new route53.TxtRecord(this.#stack, 'ownershipVerificationRecord', {
+    new route53.TxtRecord(this, 'ownershipVerificationRecord', {
       zone: hostedZone,
       values: props.domainVerificationToken
         ? [props.domainVerificationToken]
         : ['domain-verification-token-placeholder'],
-    });
-
-    const mosaicBucket = new s3.Bucket(this.#stack, 'mosaicBucket', {
-      bucketName: 'mosaic.' + hostedZone.zoneName,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true, // deletes bucket even if non-empty
-      versioned: true,
-      publicReadAccess: true,
-      // Also enables static website hosting
-      websiteIndexDocument: 'index.html',
-    });
-
-    new s3deploy.BucketDeployment(this.#stack, 'deployMosaicSite', {
-      sources: [s3deploy.Source.asset('./assets/mosaic')],
-      destinationBucket: mosaicBucket,
-      retainOnDelete: false,
-    });
-
-    new route53.ARecord(this.#stack, 'mosaicRedirectRecord', {
-      zone: hostedZone,
-      recordName: 'mosaic',
-      target: route53.RecordTarget.fromAlias(
-        new route53Targets.BucketWebsiteTarget(mosaicBucket)
-      ),
     });
 
     /**
@@ -143,18 +113,29 @@ export class InfraStack {
      * be provided to the domain registrar, e.g.,
      * {@link https://console.aws.amazon.com/route53/home#DomainDetail:boonjiashen-dev.com}
      */
-    new CfnOutput(this.#stack, 'nameServers', {
+    new cdk.CfnOutput(this, 'nameServers', {
       value: cdk.Fn.join(',', hostedZone.hostedZoneNameServers!),
     });
+
+    /**
+     * To be passed to other stacks that create records in this hosted zone
+     */
+    const hostedZoneAttr: route53.HostedZoneAttributes = {
+      hostedZoneId: hostedZone.hostedZoneId,
+      zoneName: hostedZone.zoneName,
+    }
+    new cdk.CfnOutput(this, "hostzoneAttr", {
+      value: JSON.stringify(hostedZoneAttr),
+    })
 
     /**
      * [After cdk-deploy] The "custom domain" field in `blogGithubManagementPage`
      * should be set as `blogSubdomain`, for the subdomain to be mapped to the Github page.
      */
-    new CfnOutput(this.#stack, 'blogSubdomain', {
+    new cdk.CfnOutput(this, 'blogSubdomain', {
       value: blogSubdomain,
     });
-    new CfnOutput(this.#stack, 'blogGithubManagementPage', {
+    new cdk.CfnOutput(this, 'blogGithubManagementPage', {
       value: `https://github.com/${props.githubUsername}/${props.githubUsername}.github.io/settings/pages`,
     });
   }
