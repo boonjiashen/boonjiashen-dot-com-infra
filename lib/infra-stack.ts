@@ -34,7 +34,7 @@ export interface InfraStackProps extends cdk.StackProps {
   /**
    * Name servers that'll be assigned to `dev.{domainName}.
    *
-   * Default: placeholder singletone array
+   * Default: placeholder singleton array
    */
   devNameServers?: string[];
 }
