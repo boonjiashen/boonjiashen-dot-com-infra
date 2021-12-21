@@ -24,10 +24,10 @@ The production stack manages [boonjiashen.com](http://boonjiashen.com/) while th
 
 ```bash
 # To deploy the beta stack (dev.boonjiashen.com)
-cdk deploy infraStackBeta
+cdk deploy beta
 
 # To deploy the prod stack (boonjiashen.com)
-cdk deploy infraStackProd
+cdk deploy prod
 
 # To deploy all stacks
 cdk deploy --all
