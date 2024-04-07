@@ -1,6 +1,11 @@
-import * as cdk from 'aws-cdk-lib'
-import { aws_s3 as s3, aws_s3_deployment as s3deploy, aws_route53 as route53, aws_route53_targets as route53Targets } from 'aws-cdk-lib';
-import {Construct} from "constructs";
+import * as cdk from 'aws-cdk-lib';
+import {
+  aws_s3 as s3,
+  aws_s3_deployment as s3deploy,
+  aws_route53 as route53,
+  aws_route53_targets as route53Targets,
+} from 'aws-cdk-lib';
+import {Construct} from 'constructs';
 
 export interface InfraStackProps extends cdk.StackProps {
   /**
@@ -38,12 +43,11 @@ export interface InfraStackProps extends cdk.StackProps {
 }
 
 export class InfraStack extends cdk.Stack {
-
   constructor(scope: Construct, id: string, props: InfraStackProps) {
     super(scope, id, {
       description: `Manages the infrastructure for ${props.domainName}`,
       ...props,
-    })
+    });
 
     const hostedZone = new route53.HostedZone(this, 'hostedZone', {
       zoneName: props.domainName,
@@ -74,14 +78,16 @@ export class InfraStack extends cdk.Stack {
       versioned: true,
       publicReadAccess: true,
       // This file doesn't exist, allowing the redirect to the blog
-      websiteIndexDocument: "index.html",
+      websiteIndexDocument: 'index.html',
       // Redirects all 404 (including index page, excluding PDF assets) to the blog
-      websiteRoutingRules: [{
-        condition: {
-          httpErrorCodeReturnedEquals: "404",
+      websiteRoutingRules: [
+        {
+          condition: {
+            httpErrorCodeReturnedEquals: '404',
+          },
+          hostName: blogSubdomain,
         },
-        hostName: blogSubdomain,
-      }],
+      ],
     });
 
     new s3deploy.BucketDeployment(this, 'deployTldBucketAssets', {
@@ -121,10 +127,10 @@ export class InfraStack extends cdk.Stack {
     const hostedZoneAttr: route53.HostedZoneAttributes = {
       hostedZoneId: hostedZone.hostedZoneId,
       zoneName: hostedZone.zoneName,
-    }
-    new cdk.CfnOutput(this, "hostzoneAttr", {
+    };
+    new cdk.CfnOutput(this, 'hostzoneAttr', {
       value: JSON.stringify(hostedZoneAttr),
-    })
+    });
 
     /**
      * [After cdk-deploy] The "custom domain" field in `blogGithubManagementPage`

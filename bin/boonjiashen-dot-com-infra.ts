@@ -12,7 +12,7 @@ const commonProps: cdk.StackProps = {
     // See https://docs.aws.amazon.com/acm/latest/userguide/acm-regions.html
     region: 'us-east-1',
   },
-}
+};
 
 new InfraStack(app, 'beta', {
   stackName: 'betaDomainInfraStack',
