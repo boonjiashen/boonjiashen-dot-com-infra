@@ -1,8 +1,6 @@
-import * as cdk from 'monocdk';
-import * as s3 from 'monocdk/aws-s3';
-import * as s3deploy from 'monocdk/aws-s3-deployment';
-import * as route53 from 'monocdk/aws-route53';
-import * as route53Targets from 'monocdk/aws-route53-targets';
+import * as cdk from 'aws-cdk-lib'
+import { aws_s3 as s3, aws_s3_deployment as s3deploy, aws_route53 as route53, aws_route53_targets as route53Targets } from 'aws-cdk-lib';
+import {Construct} from "constructs";
 
 export interface InfraStackProps extends cdk.StackProps {
   /**
@@ -41,7 +39,7 @@ export interface InfraStackProps extends cdk.StackProps {
 
 export class InfraStack extends cdk.Stack {
 
-  constructor(scope: cdk.Construct, id: string, props: InfraStackProps) {
+  constructor(scope: Construct, id: string, props: InfraStackProps) {
     super(scope, id, {
       description: `Manages the infrastructure for ${props.domainName}`,
       ...props,
