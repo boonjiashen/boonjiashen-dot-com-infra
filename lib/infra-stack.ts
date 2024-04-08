@@ -3,9 +3,10 @@ import {
   aws_s3 as s3,
   aws_s3_deployment as s3deploy,
   aws_route53 as route53,
-  aws_route53_targets as route53Targets,
+  aws_certificatemanager, aws_route53_targets,
 } from 'aws-cdk-lib';
 import {Construct} from 'constructs';
+import {CloudFrontToS3} from "@aws-solutions-constructs/aws-cloudfront-s3";
 
 export interface InfraStackProps extends cdk.StackProps {
   /**
@@ -76,19 +77,22 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true, // deletes bucket even if non-empty
       versioned: true,
-      publicReadAccess: true,
-      // This file doesn't exist, allowing the redirect to the blog
-      websiteIndexDocument: 'index.html',
-      // Redirects all 404 (including index page, excluding PDF assets) to the blog
-      websiteRoutingRules: [
-        {
-          condition: {
-            httpErrorCodeReturnedEquals: '404',
-          },
-          hostName: blogSubdomain,
-        },
-      ],
     });
+
+    const tldCertificate = new aws_certificatemanager.Certificate(this, "tldCertificate", {
+      domainName: hostedZone.zoneName,
+      validation: aws_certificatemanager.CertificateValidation.fromDns(hostedZone)
+    })
+
+    const tldCloudFrontToS3 = new CloudFrontToS3(this, "tldCloudfrontS3", {
+      existingBucketObj: tldBucket,
+      cloudFrontDistributionProps: {
+        // Certificate required for alternative CNAME, which in turn is required
+        // to register the A-record with Route53
+        certificate: tldCertificate,
+        domainNames: [hostedZone.zoneName]
+      }
+    })
 
     new s3deploy.BucketDeployment(this, 'deployTldBucketAssets', {
       sources: [s3deploy.Source.asset('./assets/tld')],
@@ -101,7 +105,7 @@ export class InfraStack extends cdk.Stack {
     new route53.ARecord(this, 'tldToBlogRedirectRecord', {
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(
-        new route53Targets.BucketWebsiteTarget(tldBucket)
+          new aws_route53_targets.CloudFrontTarget(tldCloudFrontToS3.cloudFrontWebDistribution),
       ),
     });
 
