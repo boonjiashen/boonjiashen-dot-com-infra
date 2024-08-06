@@ -3,6 +3,8 @@ name: CI/CD pipeline
 on:
   push:
 #    branches: main
+  schedule:
+    - cron: '0 0 * * 6'  # Run every Saturday at 9 AM JST
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -22,7 +24,7 @@ jobs:
     needs: pre-commit
     steps:
       - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::691456347435:role/github-workflow-runner
           role-session-name: deploy
