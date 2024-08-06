@@ -35,7 +35,8 @@ jobs:
         run: |
           echo "${DEFAULT_BRANCH}"
           STACK_NAME=beta
-          if [ "${{ github.ref_name }}" == $DEFAULT_BRANCH ]; then
+          #          if [ "${{ github.ref_name }}" == $DEFAULT_BRANCH ]; then
+          if [ "main" == $DEFAULT_BRANCH ]; then
             STACK_NAME=prod
           fi
           echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
