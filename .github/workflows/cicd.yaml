@@ -1,0 +1,39 @@
+#  === To test locally ===
+#  ```
+#  act --env AWS_ACCESS_KEY_ID=<foo> --env AWS_SECRET_ACCESS_KEY=<bar>
+#  ```
+
+name: CI/CD pipeline
+
+on:
+  push:
+    branches: main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - run: pre-commit run --all-files
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - name: Derive stack name
+        env:
+          DEFAULT_BRANCH: github.event.repository.default_branch
+        run: |
+          STACK_NAME=beta
+          if [ "${{ github.ref_name }}" == "$DEFAULT_BRANCH" ]; then
+            STACK_NAME=prod
+          fi
+          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm install
+      - name: Install CDK
+        run: npm install -g aws-cdk
+      - run: cdk deploy "${STACK_NAME}"
