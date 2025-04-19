@@ -4,6 +4,7 @@ on:
   push:
   schedule:
     - cron: '0 0 * * 6'  # Run every Saturday at 9 AM JST
+  workflow_dispatch:
 
 permissions:
   id-token: write # This is required for requesting the JWT
