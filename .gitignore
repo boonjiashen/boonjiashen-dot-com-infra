@@ -1,4 +1,5 @@
 .idea
+.claude
 *.js
 !assets/**/*.js
 !jest.config.js
